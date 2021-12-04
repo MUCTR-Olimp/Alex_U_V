@@ -34,22 +34,30 @@ fn main() {
     for j in i+1..n {
       let t = s[j].value - s[i].value;
       match s[i].parts.get(&t) {
-        Some(&p) => {
-          s[i].parts.insert(t,Part{next: Some(j as u16), ..p});
-          s[j].parts.insert(t,Part{next: None,ind: p.ind+1, prev: Some(i as u16)});
-          if max.1 < p.ind+1 {
-            max.0 = t;
-            max.1 = p.ind+1;
-            max.2 = j as u16;
+        Some(&p @ Part{next: Some(_),..}) => {
+          if(t == 0) {
+            let mut l = p.next.unwrap() as usize;
+            while let Some(&Part{next: Some(k),..}) = s[l].parts.get(&t) {l = k as usize;}
+            let &lp = s[l].parts.get(&t).unwrap();
+            s[l].parts.insert(t, Part{next: Some(j as u16), ..lp});
+            s[j].parts.insert(t, Part{next: None, ind: lp.ind+1, prev: Some(l as u16)});
+            if max.1 <= lp.ind+1 {
+              max = (t,lp.ind+1,j as u16);
+            }
           }
         },
+        Some(&p @ Part{next: None,..}) => {
+          s[i].parts.insert(t, Part{next: Some(j as u16), ..p});
+          s[j].parts.insert(t, Part{next: None, ind: p.ind+1, prev: Some(i as u16)});
+          if max.1 <= p.ind+1 {
+            max = (t,p.ind+1, j as u16);
+          }
+        }
         None => {
           s[i].parts.insert(t,Part{next: Some(j as u16), ind: 1, prev: None});
           s[j].parts.insert(t,Part{next: None, ind: 2, prev: Some(i as u16)});
-          if max.1 < 2 {
-            max.0 = t;
-            max.1 = 2;
-            max.2 = j as u16;
+          if max.1 <= 2 {
+            max = (t,2,j as u16);
           }
         }
       }
@@ -61,9 +69,13 @@ fn main() {
     //print!("{} ", l.index );
     let l = &s[count];
     print!("{} ",l.index+1);
-    count = match l.parts.get(&max.0) {
+    //println!("{:?}",l);
+    match l.parts.get(&max.0) {
       None => break,
-      Some(m) => m.prev.unwrap_or(0) as usize
+      Some(m) => count = match m.prev {
+        Some(i) => i as usize,
+        None => break,
+      }
     };
   }
 }
